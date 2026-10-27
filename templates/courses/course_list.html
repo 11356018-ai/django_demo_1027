@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+
+{% block title %}課程列表 - 選課系統{% endblock %}
+
+{% block extra_css %}
+<style>
+    .course-grid {
+        display: grid;
+        gap: 1.5rem;
+    }
+    .course-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .course-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .course-header {
+        background: linear-gradient(90deg, #f7fafc 0%, white 100%);
+        padding: 1.25rem 1.5rem;
+        border-bottom: 2px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+    }
+    .course-title-group h2 {
+        font-size: 1.3rem;
+        color: #2d3748;
+        margin-bottom: 0.25rem;
+    }
+    .course-code {
+        display: inline-block;
+        background: #667eea;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    .course-credits {
+        background: #48bb78;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    .course-body {
+        padding: 1.5rem;
+    }
+    .course-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #4a5568;
+    }
+    .info-item strong {
+        color: #2d3748;
+    }
+    .course-description {
+        color: #718096;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        background: #f7fafc;
+        border-radius: 4px;
+    }
+    .course-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+    }
+    .enrollment-status {
+        font-size: 0.95rem;
+        color: #4a5568;
+    }
+    .status-full {
+        color: #e53e3e;
+        font-weight: 600;
+    }
+    .status-ok {
+        color: #38a169;
+        font-weight: 600;
+    }
+    .btn {
+        padding: 0.625rem 1.5rem;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.95rem;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: opacity 0.2s;
+    }
+    .btn-primary {
+        background: #667eea;
+        color: white;
+    }
+    .btn-primary:hover {
+        opacity: 0.9;
+    }
+    .btn-disabled {
+        background: #cbd5e0;
+        color: #718096;
+        cursor: not-allowed;
+    }
+    .enrolled-badge {
+        background: #c6f6d5;
+        color: #22543d;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        background: white;
+        border-radius: 8px;
+        color: #718096;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>課程列表</h1>
+    <p>瀏覽已核准的課程，登入後即可加選</p>
+</div>
+
+<div class="course-grid">
+    {% for course in courses %}
+    <div class="course-card">
+        <div class="course-header">
+            <div class="course-title-group">
+                <h2>{{ course.name }}</h2>
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                    <span class="course-code">{{ course.code }}</span>
+                    <span class="course-credits">{{ course.credits }} 學分</span>
+                </div>
+            </div>
+        </div>
+        <div class="course-body">
+            <div class="course-info-grid">
+                <div class="info-item">
+                    <span>👨‍🏫</span>
+                    <div>
+                        <strong>授課老師：</strong>{{ course.instructor|default:"未指定" }}
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span>⏰</span>
+                    <div>
+                        <strong>上課時間：</strong>{{ course.schedule|default:"未指定" }}
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span>📍</span>
+                    <div>
+                        <strong>上課地點：</strong>{{ course.location|default:"未指定" }}
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span>👥</span>
+                    <div>
+                        <strong>目前修課人數：</strong>{{ course.enrolled_count }} / {{ course.capacity }} 人
+                    </div>
+                </div>
+            </div>
+            
+            {% if course.description %}
+            <div class="course-description">
+                {{ course.description }}
+            </div>
+            {% endif %}
+            
+            <div class="course-footer">
+                <div class="enrollment-status">
+                    {% if course.enrolled_count >= course.capacity %}
+                        <span class="status-full">⚠️ 課程已額滿</span>
+                    {% else %}
+                        <span class="status-ok">✅ 尚有 {{ course.capacity|add:"-"|add:course.enrolled_count }} 個名額</span>
+                    {% endif %}
+                </div>
+                
+                {% if user.is_authenticated %}
+                    {% if course.id in enrolled_course_ids %}
+                        <span class="enrolled-badge">✓ 已加選</span>
+                    {% elif course.enrolled_count >= course.capacity %}
+                        <span class="btn btn-disabled">額滿無法加選</span>
+                    {% else %}
+                        <form method="post" action="{% url 'enroll_course' course.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary">＋ 加選課程</button>
+                        </form>
+                    {% endif %}
+                {% else %}
+                    <a href="{% url 'login' %}?next={% url 'course_list' %}" class="btn btn-primary">登入後加選</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <h2>目前沒有可選課程</h2>
+        <p>尚未有已核准的課程，請稍後再來或聯繫管理員。</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
